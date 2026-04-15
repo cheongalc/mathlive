@@ -133,8 +133,7 @@ export function variantString(atom: Atom): string {
   const { style } = atom;
   if (!style) return '';
 
-  let result = style.variant;
-  if (result === undefined) return 'normal';
+  let result = style.variant ?? 'normal';
 
   if (
     ![
