@@ -105,9 +105,12 @@ export function onKeystroke(
   // If a placeholder is selected and we're about to type a printable character,
   // delete the placeholder first, then process the keystroke normally
   // (including any keybindings). This fixes issue #2572.
+  // Skip when Alt is held: Alt combinations are typically keybindings
+  // (e.g. Alt+, for addColumnAfter), not character input.
   if (
     mathfield.isSelectionEditable &&
     model.selectionIsPlaceholder &&
+    !evt.altKey &&
     mightProducePrintableCharacter(evt)
   ) {
     mathfield.flushInlineShortcutBuffer();
