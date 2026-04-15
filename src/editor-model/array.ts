@@ -44,6 +44,69 @@ function parentArray(
 ): [ArrayAtom | undefined, [row: number, col: number]] {
   let atom: Atom | undefined = model.at(model.position);
 
+  // Check if cursor is inside a LeftRight that should convert to a matrix.
+  // Do this before the array walk so brackets inside array cells are handled.
+  {
+    let a: Atom | undefined = atom;
+    while (a) {
+      if (a.parent instanceof LeftRightAtom) {
+        const parent = a.parent;
+        let secondCell = model.extractAtoms([
+          model.position,
+          model.offsetOf(parent.lastChild),
+        ]);
+        let firstCell = model.extractAtoms([
+          model.offsetOf(parent.firstChild),
+          model.position,
+        ]);
+        if (firstCell.length === 0) firstCell = placeholderCell();
+        if (secondCell.length === 0) secondCell = placeholderCell();
+
+        let envName: Environment = 'pmatrix';
+        const lDelim = parent.leftDelim;
+        const rDelim = parent.rightDelim;
+        if (lDelim === '(' && (rDelim === ')' || rDelim === '?'))
+          envName = 'pmatrix';
+        else if (
+          (lDelim === '[' || lDelim === '\\lbrack') &&
+          (rDelim === ']' || rDelim === '\\rbrack' || rDelim === '?')
+        )
+          envName = 'bmatrix';
+        else if (lDelim === '\\vert' && rDelim === '\\vert')
+          envName = 'vmatrix';
+        else if (lDelim === '\\Vert' && rDelim === '\\Vert')
+          envName = 'Vmatrix';
+        else if (
+          (lDelim === '{' || lDelim === '\\lbrace') &&
+          (rDelim === '.' || rDelim === '?')
+        )
+          envName = 'cases';
+
+        const array = makeEnvironment(
+          envName,
+          where.endsWith('column')
+            ? [[firstCell, secondCell]]
+            : [[firstCell], [secondCell]]
+        );
+
+        parent.parent!.addChildBefore(array, parent);
+        parent.parent!.removeChild(parent);
+        if (isPlaceholderCell(array, 0, 0)) selectCell(model, array, 0, 0);
+        else if (where.endsWith('column')) {
+          if (isPlaceholderCell(array, 0, 1)) selectCell(model, array, 0, 1);
+          else model.position = model.offsetOf(a);
+        } else {
+          if (isPlaceholderCell(array, 1, 0)) selectCell(model, array, 1, 0);
+          else model.position = model.offsetOf(a);
+        }
+
+        return [undefined, [0, 0]];
+      }
+      if (a.parent instanceof ArrayAtom) break;
+      a = a.parent;
+    }
+  }
+
   while (atom && !(atom.parent instanceof ArrayAtom)) atom = atom.parent;
 
   //
@@ -250,22 +313,37 @@ function addCell(
 }
 
 export function addRowAfter(model: _Model): boolean {
-  // Only add a row if the current position is in the top level of a cell
-  // or at the top level of the root (in which case we'll convert to a `lines` environment)
   const cursor = model.at(model.position);
-  if (
-    !isCellBranch(cursor.parentBranch) &&
-    cursor.parent !== model.root &&
-    model.root.type !== 'root'
-  ) {
-    model.announce('plonk');
-    return false;
+
+  // Check if cursor is inside a \left..\right — if so, parentArray will
+  // convert the bracket pair to a matrix environment (bmatrix, pmatrix, etc.)
+  let insideLeftRight = false;
+  let atom: Atom | undefined = cursor;
+  while (atom) {
+    if (atom.parent instanceof LeftRightAtom) { insideLeftRight = true; break; }
+    if (atom.parent instanceof ArrayAtom) break;
+    atom = atom.parent;
+  }
+
+  if (!insideLeftRight) {
+    // Only add a row if the current position is in the top level of a cell
+    // or at the top level of the root (convert to `lines` environment)
+    if (
+      !isCellBranch(cursor.parentBranch) &&
+      cursor.parent !== model.root &&
+      model.root.type !== 'root'
+    ) {
+      model.announce('plonk');
+      return false;
+    }
   }
 
   if (!model.contentWillChange({ inputType: 'insertText' })) return false;
 
-  // If in multiline mode, split the current line
-  if (model.parentEnvironment?.isMultiline) {
+  // If in multiline mode and NOT inside a LeftRight, split the current line.
+  // When inside a LeftRight, fall through to addCell which calls parentArray
+  // to convert the brackets into a matrix environment.
+  if (model.parentEnvironment?.isMultiline && !insideLeftRight) {
     // If there's a selection, delete it
     if (!model.selectionIsCollapsed) model.deleteAtoms(range(model.selection));
 
