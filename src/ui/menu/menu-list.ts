@@ -404,8 +404,14 @@ export class _MenuListState implements MenuListState {
     if (supportPopover()) {
       // @ts-ignore
       this.element.popover = 'manual';
-      // @ts-ignore
-      this.element.showPopover();
+      try {
+        // @ts-ignore
+        this.element.showPopover();
+      } catch {
+        // showPopover() throws in some Electron/Chromium embeddings when the
+        // element's shadow-including root is not the document. The menu still
+        // renders correctly without the popover top-layer promotion.
+      }
     }
 
     if (options.location) {

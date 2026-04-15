@@ -463,7 +463,7 @@ If you are using Vue, this may be because you are using the runtime-only build o
         menu.show({
           target: menuToggle,
           location: { x: bounds.left, y: bounds.bottom },
-          onDismiss: () => this.element!.classList.remove('tracking'),
+          onDismiss: () => this.element?.classList.remove('tracking'),
         });
         ev.preventDefault();
         ev.stopPropagation();

@@ -355,7 +355,7 @@ export class Menu extends _MenuListState implements RootMenuState {
         this.activeMenuItem = null;
 
         // Prevent spurious blur event by resetting the focus
-        Scrim.element!.parentElement!.focus();
+        Scrim.element?.parentElement?.focus();
 
         super.hide();
         this.state = 'closed';
