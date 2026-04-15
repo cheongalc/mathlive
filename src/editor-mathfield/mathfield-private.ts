@@ -965,6 +965,11 @@ If you are using Vue, this may be because you are using the runtime-only build o
   dispose(): void {
     if (!isValidMathfield(this)) return;
 
+    // Clear the global focus tracker so the next mathfield's onFocus()
+    // doesn't try to blur a disposed instance.
+    if (_Mathfield._globallyFocusedMathfield === this)
+      _Mathfield._globallyFocusedMathfield = undefined;
+
     l10n.unsubscribe(this._l10Subscription);
 
     this.keyboardDelegate.dispose();
