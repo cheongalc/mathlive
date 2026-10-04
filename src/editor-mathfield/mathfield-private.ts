@@ -145,6 +145,21 @@ const MENU_GLYPH = `<svg xmlns="http://www.w3.org/2000/svg" style="height: 18px;
   'tooltip.menu'
 )}"><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg>`;
 
+/**
+ * True if the event originated in the virtual keyboard toggle or the menu
+ * toggle (which also hosts the menu scrim). Use the composed path: on the
+ * host listener `evt.target` is retargeted to the host, which would make a
+ * click on the scrim over the field look like a click in the field.
+ */
+function isEventFromToggle(evt: Event): boolean {
+  const origin = evt.composedPath()[0];
+  return (
+    origin instanceof Element &&
+    origin.closest('[part=virtual-keyboard-toggle],[part=menu-toggle]') !==
+      null
+  );
+}
+
 /** @internal */
 export class _Mathfield implements Mathfield, KeyboardDelegateInterface {
   /**
@@ -857,9 +872,7 @@ If you are using Vue, this may be because you are using the runtime-only build o
       case 'mousedown':
         if (
           this.userSelect !== 'none' &&
-          !(evt.target as HTMLElement | null)?.closest(
-            '[part=virtual-keyboard-toggle],[part=menu-toggle]'
-          )
+          !isEventFromToggle(evt)
         )
           onPointerDown(this, evt as PointerEvent);
 
@@ -869,9 +882,7 @@ If you are using Vue, this may be because you are using the runtime-only build o
         if (
           !evt.defaultPrevented &&
           this.userSelect !== 'none' &&
-          !(evt.target as HTMLElement | null)?.closest(
-            '[part=virtual-keyboard-toggle],[part=menu-toggle]'
-          )
+          !isEventFromToggle(evt)
         ) {
           onPointerDown(this, evt as PointerEvent);
           // Firefox convention: holding the shift key disables custom context menu
