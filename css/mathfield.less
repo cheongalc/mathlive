@@ -650,10 +650,11 @@ menu .ML__base {
   }
 
   &.active {
-    background: var(--neutral-100);
-    scale: 1.4;
     & > .label > span {
-      border-radius: 2px;
+      scale: 1.12;
+      box-shadow:
+        0 0 0 2px var(--neutral-200),
+        0 0 0 4px var(--active-bg, #5898ff);
     }
   }
 
